@@ -1,5 +1,6 @@
 # Produit Matriciel Distribué
 
+## Sujet :
 Le but de ce projet est d'implémenter un produit matriciel de la forme C=A.B où A et B sont deux matrices carrées de taille NxN. Le calcul utilisera P machines grâce à MPI. 
 
 Le projet est à déposer sur J@lon. Les contraintes suivantes sont à respecter :
@@ -16,7 +17,8 @@ La note sera fonction des fonctionnalités implémentées dans la liste ci-desso
   - Gestion des matrices très grandes (+2 points)
   - Gestion du déséquilibre dans le calcul, i.e N non multiple de P (+3 points)
   
+## Compiler & Run
 A compiler utilisant :
-  - gcc -Wall -std=c99 matXmat.c -o mXm -lm
-  - mpicc matXmat.c -o mXm par la suite
-  - mpirun --oversubscribe -np 5 mXm
+  - __`gcc -Wall -std=c99 matXmat.c -o mXm -lm`__
+  - __`mpicc matXmat.c -o mXm par la suite`__
+  - __`mpirun --oversubscribe -np 5 mXm`__
