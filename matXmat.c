@@ -7,6 +7,7 @@ int getPredecesseur(int rank, int numprocs);
 struct matrix * allocateMatrix(int nblin, int nbCol);
 void generateMatrix(struct matrix * s);
 void printMatrix(struct matrix * s);
+void rotateMatrix(struct matrix * s);
 
 // int MPI_Bcast( void *buffer, int count, MPI_Datatype datatype, int root, MPI_Comm comm )
 // COMPILE : mpicc matXmat.c -o mXm
@@ -25,6 +26,7 @@ int main(int argc, char* argv[]){
 //  struct matrix *C = allocateMatrix(3,3);
 
   generateMatrix(&A);
+  rotateMatrix(&A);
   printMatrix(&A);
 }
 
@@ -34,6 +36,20 @@ struct matrix * allocateMatrix(int nblin, int nbCol) {
   tmp->nbLignes = nblin;
   tmp->mat = malloc(nblin * nbCol *sizeof(int));
   return tmp;
+}
+
+void rotateMatrix(struct matrix * s){
+  struct matrix * rotated = allocateMatrix(s->nbLignes, s->nbColonnes);
+  int n = s->nbLignes;
+  for (int l = 0; l < n; l++){
+    for (int c = 0; c <n; c++){
+      rotated->mat[ l * n + c] = s->mat[ c * n + l];
+    }
+  }
+
+  free (s->mat);
+  s->mat = rotated->mat;
+  free(rotated);
 }
 
 void generateMatrix(struct matrix * s) {
