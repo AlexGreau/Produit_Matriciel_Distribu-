@@ -12,6 +12,7 @@ void generateMatrix(struct matrix * s);
 void printMatrix(struct matrix * s);
 void rotateMatrix(struct matrix * s, struct matrix * dest);
 void produitMat(struct matrix * A,struct matrix * B,struct matrix * C);
+void generateVector(struct matrix * s);
 
 // int MPI_Bcast( void *buffer, int count, MPI_Datatype datatype, int root, MPI_Comm comm )
 // COMPILE : mpicc matXmat.c -o mXm
@@ -27,11 +28,13 @@ struct matrix {
 int main(int argc, char* argv[]){
   struct matrix A;
  struct matrix *B = allocateMatrix(3,3);
-  struct matrix *C = allocateMatrix(3,3);
 
   generateMatrix(&A);
-  rotateMatrix(&A,B);
-	produitMat(&A, &A,C);
+	generateVector(B);
+	struct matrix *C = allocateMatrix(A.nbLignes,B->nbColonnes);
+	printMatrix(B);
+
+	produitMat(&A, B ,C);
   printMatrix(C);
 }
 
@@ -44,11 +47,11 @@ int main(int argc, char* argv[]){
 //__________________functions____________________
 
 void produitMat(struct matrix * A,struct matrix * B,struct matrix * C){
-  for (int i = 0; i < A->nbLignes; i ++){ // ligne
-    for (int j = 0; j < A->nbColonnes; j++){ // colonne
-      for (int k = 0 ; k < B->nbLignes; k++){
+  for (int i = 0; i < C->nbLignes; i ++){ // ligne
+    for (int j = 0; j < C->nbColonnes; j++){ // colonne
+      for (int k = 0 ; k < C->nbLignes; k++){
         // C[i,j] = C[i,j] + A[i,k] * B [k,j]
-				C->mat[i*A->nbColonnes + j] = C->mat[i*A->nbColonnes + j] +	A->mat[i*A->nbColonnes + k] * B->mat[k*B->nbColonnes + j];
+				C->mat[i*C->nbColonnes + j] = C->mat[i*C->nbColonnes + j] +	A->mat[i*A->nbColonnes + k] * B->mat[k*B->nbColonnes + j];
       }
     }
   }
@@ -91,6 +94,16 @@ void generateMatrix(struct matrix * s) {
   s->mat[6] = 7;
   s->mat[7] = 8;
   s->mat[8] = 9;
+}
+
+void generateVector(struct matrix * s){
+	s->nbLignes = 3;
+	s->nbColonnes = 1;
+	int n = s->nbColonnes * s->nbLignes;
+	s->mat=malloc (n * sizeof(int));
+	s->mat[0] = 1;
+  s->mat[1] = 2;
+  s->mat[2] = 3;
 }
 
 void printMatrix(struct matrix * s){
