@@ -1,13 +1,17 @@
 // #include <mpi.h>
 #include <stdio.h>
 #include <stdlib.h>
+#ifndef max
+	#define max( a, b ) ( ((a) > (b)) ? (a) : (b) )
+#endif
 
 int getSuccesseur(int rank, int numprocs);
 int getPredecesseur(int rank, int numprocs);
 struct matrix * allocateMatrix(int nblin, int nbCol);
 void generateMatrix(struct matrix * s);
 void printMatrix(struct matrix * s);
-void rotateMatrix(struct matrix * s);
+void rotateMatrix(struct matrix * s, struct matrix * dest);
+void produitMat(struct matrix * A,struct matrix * B,struct matrix * C);
 
 // int MPI_Bcast( void *buffer, int count, MPI_Datatype datatype, int root, MPI_Comm comm )
 // COMPILE : mpicc matXmat.c -o mXm
@@ -22,12 +26,32 @@ struct matrix {
 
 int main(int argc, char* argv[]){
   struct matrix A;
-// struct matrix *B = allocateMatrix(3,3);
-//  struct matrix *C = allocateMatrix(3,3);
+ struct matrix *B = allocateMatrix(3,3);
+  struct matrix *C = allocateMatrix(3,3);
 
   generateMatrix(&A);
-  rotateMatrix(&A);
-  printMatrix(&A);
+  rotateMatrix(&A,B);
+	produitMat(&A, &A,C);
+  printMatrix(C);
+}
+
+
+
+
+
+
+
+//__________________functions____________________
+
+void produitMat(struct matrix * A,struct matrix * B,struct matrix * C){
+  for (int i = 0; i < A->nbLignes; i ++){ // ligne
+    for (int j = 0; j < A->nbColonnes; j++){ // colonne
+      for (int k = 0 ; k < B->nbLignes; k++){
+        // C[i,j] = C[i,j] + A[i,k] * B [k,j]
+				C->mat[i*A->nbColonnes + j] = C->mat[i*A->nbColonnes + j] +	A->mat[i*A->nbColonnes + k] * B->mat[k*B->nbColonnes + j];
+      }
+    }
+  }
 }
 
 struct matrix * allocateMatrix(int nblin, int nbCol) {
@@ -38,17 +62,15 @@ struct matrix * allocateMatrix(int nblin, int nbCol) {
   return tmp;
 }
 
-void rotateMatrix(struct matrix * s){
+void rotateMatrix(struct matrix * s, struct matrix * dest){
   struct matrix * rotated = allocateMatrix(s->nbLignes, s->nbColonnes);
   int n = s->nbLignes;
   for (int l = 0; l < n; l++){
-    for (int c = 0; c <n; c++){
+    for (int c = 0; c < n; c++){
       rotated->mat[ l * n + c] = s->mat[ c * n + l];
     }
   }
-
-  free (s->mat);
-  s->mat = rotated->mat;
+  dest->mat = rotated->mat;
   free(rotated);
 }
 
