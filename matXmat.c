@@ -8,7 +8,7 @@
 int getSuccesseur(int rank, int numprocs);
 int getPredecesseur(int rank, int numprocs);
 struct matrix * allocateMatrix(int nblin, int nbCol);
-void generateMatrix(struct matrix * s);
+void generateMatrix(struct matrix * s, int size);
 void printMatrix(struct matrix * s);
 void rotateMatrix(struct matrix * s, struct matrix * dest);
 void produitMat(struct matrix * A,struct matrix * B,struct matrix * C);
@@ -39,18 +39,20 @@ int main(int argc, char* argv[]){
   int * chunkSize = malloc (sizeof(int) * 1);
 
 	int nblA,nbca,nblB,nbcB;
-  struct matrix A;
+  struct matrix source;
 
 	// donner master toute les donnees
 	if (rank == master){
 		// TODO: implementer lecture fichier entree
-		generateMatrix(&A);
-    *chunkSize = A.nbColonnes / numprocs;
+		generateMatrix(&source,6);
+    *chunkSize = source.nbColonnes / numprocs;
   }
 
   MPI_Bcast(chunkSize,1,MPI_INT,master,MPI_COMM_WORLD);
   printf("rank : %d, received : %d \n",rank,*chunkSize);
 
+  struct matrix *A = allocateMatrix(1,*chunkSize);
+  printMatrix(A);
   // scatter
   /*MPI_Scatter(
     void* send_data,
@@ -117,23 +119,15 @@ void rotateMatrix(struct matrix * s, struct matrix * dest){
   free(rotated);
 }
 
-void generateMatrix(struct matrix * s) {
+void generateMatrix(struct matrix * s, int size) {
   //construction d'un tableau pour tester
-  int n = 3;
+  int n = size;
   s->nbLignes = n;
   s->nbColonnes = n;
   s->mat=malloc(n*n *sizeof(int));
-  s->mat[0] = 1;
-  s->mat[1] = 2;
-  s->mat[2] = 3;
-
-  s->mat[3] = 4;
-  s->mat[4] = 5;
-  s->mat[5] = 6;
-
-  s->mat[6] = 7;
-  s->mat[7] = 8;
-  s->mat[8] = 9;
+  for (int i = 0; i < n; i ++){
+    s->mat[i] = i + 1;
+  }
 }
 
 void generateVector(struct matrix * s){
