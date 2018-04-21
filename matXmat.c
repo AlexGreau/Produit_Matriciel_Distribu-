@@ -1,4 +1,4 @@
-// #include <mpi.h>
+#include <mpi.h>
 #include <stdio.h>
 #include <stdlib.h>
 #ifndef max
@@ -26,16 +26,56 @@ struct matrix {
 };
 
 int main(int argc, char* argv[]){
-  struct matrix A;
- struct matrix *B = allocateMatrix(3,3);
+	// donner au master toute la matrice
+	// scatter matrices : (quelle taille attendre ? envoyer taille au prealable ?)
+	// chaque matrice fait son calcul
+	// rassembler les resultats
+	// print
+	int numprocs, rank;
+	MPI_Init(&argc, &argv);
+	MPI_Comm_size(MPI_COMM_WORLD, &numprocs);
+	MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+	int master = 1;
+  int * chunkSize = malloc (sizeof(int) * 1);
 
-  generateMatrix(&A);
-	generateVector(B);
+	int nblA,nbca,nblB,nbcB;
+  struct matrix A;
+
+	// donner master toute les donnees
+	if (rank == master){
+		// TODO: implementer lecture fichier entree
+		generateMatrix(&A);
+    *chunkSize = A.nbColonnes / numprocs;
+  }
+
+  MPI_Bcast(chunkSize,1,MPI_INT,master,MPI_COMM_WORLD);
+  printf("rank : %d, received : %d \n",rank,*chunkSize);
+
+  // scatter
+  /*MPI_Scatter(
+    void* send_data,
+    int send_count,
+    MPI_Datatype send_datatype,
+    void* recv_data,
+    int recv_count,
+    MPI_Datatype recv_datatype,
+    int root,
+    MPI_Comm communicator)
+*/
+
+	// recevoir tailles pour init la mat de resultats (taille A,taille B)
+/*
+ 	struct matrix *B = allocateMatrix(3,3);
+
+  MPI_Scatter(&A, nblA/numprocs, MPI_INT, &A,nblA/numprocs,MPI_INT,master,MPI_COMM_WORLD);
+*/
+/*
 	struct matrix *C = allocateMatrix(A.nbLignes,B->nbColonnes);
-	printMatrix(B);
 
 	produitMat(&A, B ,C);
   printMatrix(C);
+*/
+	MPI_Finalize();
 }
 
 
