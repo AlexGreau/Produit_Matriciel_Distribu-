@@ -35,23 +35,25 @@ int main(int argc, char* argv[]){
 	MPI_Init(&argc, &argv);
 	MPI_Comm_size(MPI_COMM_WORLD, &numprocs);
 	MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-	int master = 1;
+	int master = 0;
   int * chunkSize = malloc (sizeof(int) * 1);
 
-	int nblA,nbca,nblB,nbcB;
   struct matrix source;
 
 	// donner master toute les donnees
 	if (rank == master){
 		// TODO: implementer lecture fichier entree
-		generateMatrix(&source,6);
-    *chunkSize = source.nbColonnes / numprocs;
+    printf ("im in");
+		generateMatrix(&source,numprocs);
+    *chunkSize = source.nbColonnes * source.nbLignes / numprocs;
   }
 
   MPI_Bcast(chunkSize,1,MPI_INT,master,MPI_COMM_WORLD);
   printf("rank : %d, received : %d \n",rank,*chunkSize);
 
   struct matrix *A = allocateMatrix(1,*chunkSize);
+
+  MPI_Scatter(source.mat,*chunkSize,MPI_INT,A->mat,*chunkSize,MPI_INT,master,MPI_COMM_WORLD);
   printMatrix(A);
   // scatter
   /*MPI_Scatter(
@@ -103,7 +105,7 @@ struct matrix * allocateMatrix(int nblin, int nbCol) {
   struct matrix * tmp = malloc(sizeof(struct matrix));
   tmp->nbColonnes = nbCol;
   tmp->nbLignes = nblin;
-  tmp->mat = malloc(nblin * nbCol *sizeof(int));
+  tmp->mat = calloc(nblin * nbCol, sizeof(int));
   return tmp;
 }
 
@@ -125,7 +127,7 @@ void generateMatrix(struct matrix * s, int size) {
   s->nbLignes = n;
   s->nbColonnes = n;
   s->mat=malloc(n*n *sizeof(int));
-  for (int i = 0; i < n; i ++){
+  for (int i = 0; i < n * n; i ++){
     s->mat[i] = i + 1;
   }
 }
@@ -142,7 +144,7 @@ void generateVector(struct matrix * s){
 
 void printMatrix(struct matrix * s){
   int taille = s->nbColonnes * s->nbLignes;
-  printf("---- Matrix of size %i ---- \n", taille);
+  printf("---- Matrix of %i lanes & %i columns---- \n", s->nbLignes,s->nbColonnes);
   for (int i = 0; i < s->nbLignes; i++){
     for (int j = 0; j < s->nbColonnes; j++){
       printf("%d ", s->mat[i*s->nbColonnes + j]);
