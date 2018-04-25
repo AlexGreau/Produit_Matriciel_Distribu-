@@ -12,7 +12,7 @@ void generateMatrix(struct matrix * s, int size);
 void generate0Matrix(struct matrix * s, int size);
 
 void printMatrix(struct matrix * s);
-void rotateMatrix(struct matrix * s, struct matrix * dest);
+struct matrix * rotateMatrix(struct matrix * s);
 void produitMat(struct matrix * A,struct matrix * B,struct matrix * C);
 void generateVector(struct matrix * s,int size);
 
@@ -45,48 +45,50 @@ int main(int argc, char* argv[]){
 	MPI_Comm_rank(MPI_COMM_WORLD, &rank);
 	int master = 0;
   int * chunkSize = malloc (sizeof(int) * 1);
+	int * n = malloc (sizeof(int) *1);
   struct matrix * sourceA = malloc (sizeof(struct matrix));
 	struct matrix * sourceB = malloc (sizeof(struct matrix));
-	struct matrix * finalC = malloc (sizeof(struct matrix));
+	struct matrix * rotatedSourceB = malloc (sizeof(struct matrix));
+	struct matrix * finalC  = malloc (sizeof(struct matrix));
 
 	// donner master toute les donnees
 	if (rank == master){
 		// TODO: implementer lecture fichier entree
-		generateMatrix(sourceA,numprocs);
-    *chunkSize = sourceA->nbColonnes * sourceA->nbLignes / numprocs;
+		generateMatrix(sourceA,numprocs*2);
+		*n = sourceA->nbLignes;
     finalC = allocateMatrix(sourceA->nbLignes,sourceA->nbColonnes);
-		generateMatrix(sourceB,numprocs);
+		generateMatrix(sourceB,numprocs * 2);
+		rotatedSourceB = rotateMatrix(sourceB);
+		printMatrix(rotatedSourceB);
+
   }
 
-  MPI_Bcast(chunkSize,1,MPI_INT,master,MPI_COMM_WORLD);
+	MPI_Bcast(n,1,MPI_INT,master,MPI_COMM_WORLD);
+	*chunkSize = *n / numprocs;
+
   printf("rank : %d, received : %d \n",rank,*chunkSize);
 
 	// si n = numprocs
-  struct matrix * localA = malloc(sizeof(struct matrix)); // ne pas oublier de malloc
+  struct matrix * localA = malloc (sizeof(struct matrix));
 	struct matrix * localB = malloc (sizeof(struct matrix));
 	struct matrix * localC = malloc (sizeof(struct matrix));
 
 // car n = p
-	localA = allocateMatrix (1,*chunkSize);
-	localB = allocateMatrix(*chunkSize,1);
-  MPI_Scatter(sourceA->mat,*chunkSize,MPI_INT,localA->mat,*chunkSize,MPI_INT,master,MPI_COMM_WORLD);
-	// scatter B
-	MPI_Scatter(sourceB->mat, *chunkSize,MPI_INT,localB->mat, *chunkSize, MPI_INT,master,MPI_COMM_WORLD);
-
+	localA = allocateMatrix (*chunkSize, *n);
+	localB = allocateMatrix (*n, *chunkSize);
+  MPI_Scatter(sourceA->mat,*chunkSize * *n,MPI_INT,localA->mat,*chunkSize * *n,MPI_INT,master,MPI_COMM_WORLD);
+	MPI_Scatter(rotatedSourceB->mat, *chunkSize * *n,MPI_INT,localB->mat, *chunkSize * *n, MPI_INT,master,MPI_COMM_WORLD);
 
   // calculations
-
 	localC = allocateMatrix(localA->nbLignes,localB->nbColonnes);
-
 	produitMat(localA, localB ,localC);
 
 	// transmit chunk of B
 
   // gather at master
   MPI_Gather (localC->mat,*chunkSize,MPI_INT, finalC->mat,*chunkSize,MPI_INT,master,MPI_COMM_WORLD);
-  if (rank == master){
+  if (rank == master +1){
     //printMatrix(finalC);
-		printMatrix(localB);
   }
 
 	MPI_Finalize();
@@ -125,7 +127,7 @@ void allocateMat(struct matrix * tmp,int nblin, int nbCol){
 	tmp->mat = calloc(nblin * nbCol, sizeof(int));
 }
 
-void rotateMatrix(struct matrix * s, struct matrix * dest){
+struct matrix * rotateMatrix(struct matrix * s){
   struct matrix * rotated = allocateMatrix(s->nbLignes, s->nbColonnes);
   int n = s->nbLignes;
   for (int l = 0; l < n; l++){
@@ -133,8 +135,7 @@ void rotateMatrix(struct matrix * s, struct matrix * dest){
       rotated->mat[ l * n + c] = s->mat[ c * n + l];
     }
   }
-  dest->mat = rotated->mat;
-  free(rotated);
+	return rotated;
 }
 
 void generateMatrix(struct matrix * s, int size) {
