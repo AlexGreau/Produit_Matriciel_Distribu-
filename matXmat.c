@@ -46,6 +46,7 @@ int main(int argc, char* argv[]){
 	int master = 0;
   int * chunkSize = malloc (sizeof(int) * 1);
   struct matrix * sourceA = malloc (sizeof(struct matrix));
+	struct matrix * sourceB = malloc (sizeof(struct matrix));
 	struct matrix * finalC = malloc (sizeof(struct matrix));
 
 	// donner master toute les donnees
@@ -54,6 +55,7 @@ int main(int argc, char* argv[]){
 		generateMatrix(sourceA,numprocs);
     *chunkSize = sourceA->nbColonnes * sourceA->nbLignes / numprocs;
     finalC = allocateMatrix(sourceA->nbLignes,sourceA->nbColonnes);
+		generateMatrix(sourceB,numprocs);
   }
 
   MPI_Bcast(chunkSize,1,MPI_INT,master,MPI_COMM_WORLD);
@@ -64,15 +66,15 @@ int main(int argc, char* argv[]){
 	struct matrix * localB = malloc (sizeof(struct matrix));
 	struct matrix * localC = malloc (sizeof(struct matrix));
 
+// car n = p
 	localA = allocateMatrix (1,*chunkSize);
-
+	localB = allocateMatrix(*chunkSize,1);
   MPI_Scatter(sourceA->mat,*chunkSize,MPI_INT,localA->mat,*chunkSize,MPI_INT,master,MPI_COMM_WORLD);
 	// scatter B
-
+	MPI_Scatter(sourceB->mat, *chunkSize,MPI_INT,localB->mat, *chunkSize, MPI_INT,master,MPI_COMM_WORLD);
 
 
   // calculations
-  generateMatrix(localB,*chunkSize);
 
 	localC = allocateMatrix(localA->nbLignes,localB->nbColonnes);
 
@@ -83,7 +85,8 @@ int main(int argc, char* argv[]){
   // gather at master
   MPI_Gather (localC->mat,*chunkSize,MPI_INT, finalC->mat,*chunkSize,MPI_INT,master,MPI_COMM_WORLD);
   if (rank == master){
-    printMatrix(finalC);
+    //printMatrix(finalC);
+		printMatrix(localB);
   }
 
 	MPI_Finalize();
