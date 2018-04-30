@@ -1,6 +1,7 @@
 #include <mpi.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #ifndef max
 	#define max( a, b ) ( ((a) > (b)) ? (a) : (b) )
 #endif
@@ -17,6 +18,8 @@ void produitMat(struct matrix * A,struct matrix * B,struct matrix * C);
 void generateVector(struct matrix * s,int size);
 
 void allocateMat(struct matrix * tmp,int nblin, int nbCol);
+
+void input( struct matrix * source, char* file,int* n);
 
 // int MPI_Bcast( void *buffer, int count, MPI_Datatype datatype, int root, MPI_Comm comm )
 
@@ -43,17 +46,19 @@ int main(int argc, char* argv[]){
 	MPI_Init(&argc, &argv);
 	MPI_Comm_size(MPI_COMM_WORLD, &numprocs);
 	MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+
 	int master = 0;
+
   int * chunkSize = malloc (sizeof(int) * 1);
 	int * n = malloc (sizeof(int) *1);
   struct matrix * sourceA = malloc (sizeof(struct matrix));
 	struct matrix * sourceB = malloc (sizeof(struct matrix));
-//	struct matrix * rotatedSourceB = malloc (sizeof(struct matrix));
 	struct matrix * finalC  = malloc (sizeof(struct matrix));
 
 	// donner master toute les donnees
 	if (rank == master){
 		// TODO: implementer lecture fichier entree
+		input(sourceA,argv[1],n);
 		generateMatrix(sourceA,numprocs*2);
 		*n = sourceA->nbLignes;
     finalC = allocateMatrix(sourceA->nbLignes,sourceA->nbColonnes);
@@ -86,9 +91,11 @@ int main(int argc, char* argv[]){
   // gather at master
   MPI_Gather (localC->mat,*chunkSize,MPI_INT, finalC->mat,*chunkSize,MPI_INT,master,MPI_COMM_WORLD);
   if (rank == master +1){
+		/*
 		printMatrix(localA);
 		printMatrix(localB);
     printMatrix(localC);
+		*/
   }
 
 	MPI_Finalize();
@@ -188,4 +195,38 @@ int getSuccesseur(int rank, int numprocs){
 
 int getPredecesseur(int rank, int numprocs){
     return (rank - 1 + numprocs) % numprocs;
+}
+
+
+void input(struct matrix* source, char* file,int* n){
+	FILE* fichier = NULL;
+	fichier = fopen(file, "r");
+	if(fichier == NULL){
+		fprintf(stderr, "The file \"%s\" doesn't exist.\n", file);
+		exit(EXIT_FAILURE);
+	}else {
+		char * line = NULL;
+		char * token;
+		ssize_t read;
+		size_t len = 0;
+		*n = 0;
+
+		read = getline(&line, &len, fichier);
+		printf("Réception d'une ligne de longueur %zu :\n", read);
+		printf("%s\n", line);
+		char temp;
+		token = strtok(line, " ");
+
+	  while(token != NULL){
+				//printf("%s\n", line);
+				printf("%s\n", token);
+			  token = strtok(NULL, " ");
+	      //scanf("%hh%c ", line, &temp);
+	      *n++;
+	  }
+
+		printf("%d\n", *n);
+
+
+	}
 }
