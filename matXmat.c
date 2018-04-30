@@ -18,9 +18,8 @@ void produitMat(struct matrix * A,struct matrix * B,struct matrix * C);
 void generateVector(struct matrix * s,int size);
 
 void allocateMat(struct matrix * tmp,int nblin, int nbCol);
-
-void input( struct matrix * source, char* file,int* n);
-
+int nfinder(char* file);
+struct matrix * input(char * file, int n);
 // int MPI_Bcast( void *buffer, int count, MPI_Datatype datatype, int root, MPI_Comm comm )
 
 /*
@@ -58,11 +57,14 @@ int main(int argc, char* argv[]){
 	// donner master toute les donnees
 	if (rank == master){
 		// TODO: implementer lecture fichier entree
-		input(sourceA,argv[1],n);
-		generateMatrix(sourceA,numprocs*2);
+		*n = nfinder(argv[1]);
+		sourceA = input (argv[1],*n);
+
+		//generateMatrix(sourceA,numprocs*2);
 		*n = sourceA->nbLignes;
     finalC = allocateMatrix(sourceA->nbLignes,sourceA->nbColonnes);
-		generateMatrix(sourceB,numprocs * 2);
+		//generateMatrix(sourceB,numprocs * 2);
+		sourceB = input (argv[1],*n);
 		rotateMatrix(sourceB);
 	}
 
@@ -79,6 +81,7 @@ int main(int argc, char* argv[]){
 // car n = p
 	localA = allocateMatrix (*chunkSize, *n);
 	localB = allocateMatrix (*n, *chunkSize);
+	/*
   MPI_Scatter(sourceA->mat,*chunkSize * *n,MPI_INT,localA->mat,*chunkSize * *n,MPI_INT,master,MPI_COMM_WORLD);
 	MPI_Scatter(sourceB->mat, *chunkSize * *n,MPI_INT,localB->mat, *chunkSize * *n, MPI_INT,master,MPI_COMM_WORLD);
 	rotateMatrix(localB);
@@ -96,7 +99,7 @@ int main(int argc, char* argv[]){
 		printMatrix(localB);
     printMatrix(localC);
 		*/
-  }
+//  }
 
 	MPI_Finalize();
 }
@@ -198,18 +201,18 @@ int getPredecesseur(int rank, int numprocs){
 }
 
 
-void input(struct matrix* source, char* file,int* n){
+int nfinder(char* file){
 	FILE* fichier = NULL;
 	fichier = fopen(file, "r");
 	if(fichier == NULL){
 		fprintf(stderr, "The file \"%s\" doesn't exist.\n", file);
 		exit(EXIT_FAILURE);
-	}else {
+	}else { // procedure normale
 		char * line = NULL;
 		char * token;
 		ssize_t read;
 		size_t len = 0;
-		*n = 0;
+		int n = 0;
 
 		read = getline(&line, &len, fichier);
 		printf("Réception d'une ligne de longueur %zu :\n", read);
@@ -222,11 +225,35 @@ void input(struct matrix* source, char* file,int* n){
 				printf("%s\n", token);
 			  token = strtok(NULL, " ");
 	      //scanf("%hh%c ", line, &temp);
-	      *n++;
+	      n++;
 	  }
-
-		printf("%d\n", *n);
-
-
+		printf(" n = %d\n", n);
+		return n;
 	}
+}
+
+struct matrix * input(char * file, int n){
+	struct matrix *source = malloc (sizeof(struct matrix));
+	source = allocateMatrix(n,n);
+	char * line = NULL;
+	size_t len = 0;
+	FILE* fichier = NULL;
+	fichier = fopen(file, "r");
+	char * token;
+
+
+	for (int i = 0; i < n; i++){
+		getline(&line,&len, fichier);
+		token = strtok(line, " ");
+
+		for (int j = 0; j < n; j++){
+			// tokeniser et passer au suivant
+			int value = atoi(token);
+			source->mat[i*n+j] = value;
+			token = strtok(NULL, " ");
+		}
+	}
+	printMatrix(source);
+	fclose(fichier);
+	return source;
 }
