@@ -20,15 +20,6 @@ void generateVector(struct matrix * s,int size);
 void allocateMat(struct matrix * tmp,int nblin, int nbCol);
 int nfinder(char* file);
 struct matrix * input(char * file, int n);
-// int MPI_Bcast( void *buffer, int count, MPI_Datatype datatype, int root, MPI_Comm comm )
-
-/*
-  MPI_Scatter( void* send_data,  int send_count,  MPI_Datatype send_datatype,  void* recv_data,
-              int recv_count,  MPI_Datatype recv_datatype,  int root,  MPI_Comm communicator)
-
- MPI_Gather(void* send_data, int send_count, MPI_Datatype send_datatype, void* recv_data,
-    int recv_count, MPI_Datatype recv_datatype, int root, MPI_Comm communicator)
-*/
 
 // COMPILE : mpicc matXmat.c -o mXm
 // RUN : mpirun --oversubscribe -np 5 mXm
@@ -58,39 +49,43 @@ int main(int argc, char* argv[]){
 	if (rank == master){
 		*n = nfinder(argv[1]);
 		sourceA = input (argv[1],*n);
-		//generateMatrix(sourceA,numprocs*2);
     finalC = allocateMatrix(sourceA->nbLignes,sourceA->nbColonnes);
-		//generateMatrix(sourceB,numprocs * 2);
 		sourceB = input (argv[2],*n);
 		rotateMatrix(sourceB);
 	}
 
 	MPI_Bcast(n,1,MPI_INT,master,MPI_COMM_WORLD);
-	*chunkSize = *n / numprocs;
-
-  printf("rank : %d, received : %d \n",rank,*chunkSize);
 
 	// si n = numprocs
   struct matrix * localA = malloc (sizeof(struct matrix));
 	struct matrix * localB = malloc (sizeof(struct matrix));
 	struct matrix * localC = malloc (sizeof(struct matrix));
 
-// car n = p
+	*chunkSize = *n / numprocs;
+	printf("rank : %d, received : %d \n",rank,*chunkSize);
+	// car n = p
 	localA = allocateMatrix (*chunkSize, *n);
 	localB = allocateMatrix (*n, *chunkSize);
 
   MPI_Scatter(sourceA->mat,*chunkSize * *n,MPI_INT,localA->mat,*chunkSize * *n,MPI_INT,master,MPI_COMM_WORLD);
 	MPI_Scatter(sourceB->mat, *chunkSize * *n,MPI_INT,localB->mat, *chunkSize * *n, MPI_INT,master,MPI_COMM_WORLD);
 	rotateMatrix(localB);
+
+
   // calculations
-	localC = allocateMatrix(localA->nbLignes,localB->nbColonnes);
+	localC = allocateMatrix(localA->nbLignes,*n);
+	// localC sera la ligne  ENTIERE contenant les res du proc p
+	// resultat du prod mat local de taille localA->nbLignes, localB->nbColonnes
+	// situe ensuite ce petit bout dans localC
 	produitMat(localA, localB ,localC);
 
 	// transmit chunk of B
 
   // gather at master
-  MPI_Gather (localC->mat,*chunkSize,MPI_INT, finalC->mat,*chunkSize,MPI_INT,master,MPI_COMM_WORLD);
-  if (rank == master){
+  MPI_Gather (localC->mat,localC->nbLignes *localC->nbColonnes ,MPI_INT, finalC->mat,localC->nbLignes *localC->nbColonnes,MPI_INT,master,MPI_COMM_WORLD);
+
+	/* debug / verif */
+	if (rank == master){
 		printMatrix(localA);
 		printMatrix(localB);
     printMatrix(finalC);
