@@ -1,5 +1,6 @@
-#include <mpi.h>
+#define _GNU_SOURCE
 #include <stdio.h>
+#include <mpi.h>
 #include <stdlib.h>
 #include <string.h>
 #ifndef max
@@ -86,8 +87,8 @@ int main(int argc, char* argv[]){
 
 	/* debug / verif */
 	if (rank == master){
-		printMatrix(localA);
-		printMatrix(localB);
+	//	printMatrix(localA);
+	//	printMatrix(localB);
     printMatrix(finalC);
   }
 
@@ -104,6 +105,7 @@ int main(int argc, char* argv[]){
 
 void produitMat(struct matrix * A,struct matrix * B,struct matrix * C){
 	int n = A->nbColonnes;
+	#pragma omp parallel for
   for (int i = 0; i < A->nbLignes; i ++){ // ligne
     for (int j = 0; j < B->nbColonnes; j++){ // colonne
       for (int k = 0 ; k < n; k++){
@@ -173,7 +175,6 @@ void generateVector(struct matrix * s,int size){
 }
 
 void printMatrix(struct matrix * s){
-  int taille = s->nbColonnes * s->nbLignes;
   printf("---- Matrix of %i lanes & %i columns---- \n", s->nbLignes,s->nbColonnes);
   for (int i = 0; i < s->nbLignes; i++){
     for (int j = 0; j < s->nbColonnes; j++){
@@ -201,13 +202,11 @@ int nfinder(char* file){
 	}else { // procedure normale
 		char * line = NULL;
 		char * token;
-		ssize_t read;
 		size_t len = 0;
 		int n = 0;
 
-		read = getline(&line, &len, fichier);
+		getline(&line, &len, fichier);
 
-		char temp;
 		token = strtok(line, " ");
 
 	  while(token != NULL){
@@ -244,7 +243,6 @@ struct matrix * input(char * file, int n){
 			token = strtok(NULL, " ");
 		}
 	}
-//	printMatrix(source);
 	fclose(fichier);
 	return source;
 }
