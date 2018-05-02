@@ -38,8 +38,6 @@ int main(int argc, char* argv[]){
 	MPI_Init(&argc, &argv);
 	MPI_Comm_size(MPI_COMM_WORLD, &numprocs);
 	MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-	MPI_Status status;
-
 
 	int master = 0;
 
@@ -67,49 +65,35 @@ int main(int argc, char* argv[]){
 	struct matrix * localTemp = malloc (sizeof(struct matrix));
 
 	*chunkSize = *n / numprocs;
+	printf("rank : %d, received : %d \n",rank,*chunkSize);
 	// car n = p
 	localA = allocateMatrix (*chunkSize, *n);
 	localB = allocateMatrix (*n, *chunkSize);
 	localTemp = allocateMatrix(*chunkSize,*chunkSize);
-	int * localBtemp = malloc(sizeof (int) * localB->nbColonnes * localB->nbLignes);
-
 
   MPI_Scatter(sourceA->mat,*chunkSize * *n,MPI_INT,localA->mat,*chunkSize * *n,MPI_INT,master,MPI_COMM_WORLD);
 	MPI_Scatter(sourceB->mat, *chunkSize * *n,MPI_INT,localB->mat, *chunkSize * *n, MPI_INT,master,MPI_COMM_WORLD);
 	rotateMatrix(localB);
 
 
+  // calculations
 	localC = allocateMatrix(localA->nbLignes,*n);
-	int Successeur = (rank + 1) % numprocs;
-	int Predecesseur = (rank - 1 + numprocs) % numprocs;
-	// transmit chunk of B
-	for (int tour = 0; tour < numprocs - 1;tour++){
-		// do job
-		produitMat(localA, localB ,localTemp);
-		transferInto(localTemp,localC,tour,rank,*n);
-		// end job
-		if (rank != master){
-			MPI_Send (localB->mat, localB->nbLignes * localB->nbColonnes, MPI_INT, Successeur, tour , MPI_COMM_WORLD);
-			MPI_Recv (localB->mat, localB->nbLignes * localB->nbColonnes, MPI_INT, Predecesseur, tour , MPI_COMM_WORLD, &status);
-		}
-		else {
-			memcpy(localBtemp,localB->mat,sizeof (int) * localB->nbColonnes * localB->nbLignes);
+	// localC sera la ligne  ENTIERE contenant les res du proc p
+	// resultat du prod mat local de taille localA->nbLignes, localB->nbColonnes
+	// situe ensuite ce petit bout dans localC
+	produitMat(localA, localB ,localTemp);
+	transferInto(localTemp,localC,0,rank,*n);
 
-			MPI_Recv (localB->mat, localB->nbLignes * localB->nbColonnes, MPI_INT, Predecesseur, tour , MPI_COMM_WORLD, &status);
-			MPI_Send (localBtemp, localB->nbLignes * localB->nbColonnes, MPI_INT, Successeur, tour , MPI_COMM_WORLD);
-			printf( " tour : %d, prdecessor : %d\n", tour,Predecesseur);
-			printMatrix(localB);
-		}
-	}
-	// once all finished
+	// transmit chunk of B
+
   // gather at master
   MPI_Gather (localC->mat,localC->nbLignes *localC->nbColonnes ,MPI_INT, finalC->mat,localC->nbLignes *localC->nbColonnes,MPI_INT,master,MPI_COMM_WORLD);
 
 	/* debug / verif */
 	if (rank == master ){
 	//	printMatrix(localA);
-	//	printMatrix(finalC);
-    printMatrix(localB);
+		printMatrix(finalC);
+  //  printMatrix(localTemp);
   }
 
 	MPI_Finalize();
@@ -233,6 +217,7 @@ int nfinder(char* file){
 			  token = strtok(NULL, " ");
 	      n++;
 	  }
+		printf(" n = %d\n", n);
 		return n;
 	}
 }
@@ -267,10 +252,10 @@ struct matrix * input(char * file, int n){
 }
 
 void transferInto(struct matrix* source, struct matrix * dest, int tour, int rank,int n){
-	int offset = ((tour +rank)*source->nbColonnes)%n;
-	for (int i =0; i < source->nbLignes; i ++){
-		for (int j = 0 ; j < source->nbColonnes; j ++ ){
-			dest->mat[offset + j + i*dest->nbColonnes] = source->mat[j + i *source->nbColonnes];
+	int offset = (rank*source->nbColonnes + tour)%n;
+	for (int i =0; i < source->nbColonnes; i ++){
+		for (int j = 0 ; j < source->nbLignes; j ++ ){
+			dest->mat[offset + i + j*dest->nbColonnes] = dest->mat[offset + i + j*dest->nbColonnes] + source->mat[i + j *source->nbColonnes];
 		}
 	}
 }
