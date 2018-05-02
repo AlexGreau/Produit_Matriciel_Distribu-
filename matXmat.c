@@ -21,6 +21,7 @@ void generateVector(struct matrix * s,int size);
 void allocateMat(struct matrix * tmp,int nblin, int nbCol);
 int nfinder(char* file);
 struct matrix * input(char * file, int n);
+void transferInto(struct matrix* source, struct matrix * dest, int tour, int rank,int n);
 
 // COMPILE : mpicc matXmat.c -o mXm
 // RUN : mpirun --oversubscribe -np 5 mXm
@@ -61,12 +62,14 @@ int main(int argc, char* argv[]){
   struct matrix * localA = malloc (sizeof(struct matrix));
 	struct matrix * localB = malloc (sizeof(struct matrix));
 	struct matrix * localC = malloc (sizeof(struct matrix));
+	struct matrix * localTemp = malloc (sizeof(struct matrix));
 
 	*chunkSize = *n / numprocs;
 	printf("rank : %d, received : %d \n",rank,*chunkSize);
 	// car n = p
 	localA = allocateMatrix (*chunkSize, *n);
 	localB = allocateMatrix (*n, *chunkSize);
+	localTemp = allocateMatrix(*chunkSize,*chunkSize);
 
   MPI_Scatter(sourceA->mat,*chunkSize * *n,MPI_INT,localA->mat,*chunkSize * *n,MPI_INT,master,MPI_COMM_WORLD);
 	MPI_Scatter(sourceB->mat, *chunkSize * *n,MPI_INT,localB->mat, *chunkSize * *n, MPI_INT,master,MPI_COMM_WORLD);
@@ -78,7 +81,8 @@ int main(int argc, char* argv[]){
 	// localC sera la ligne  ENTIERE contenant les res du proc p
 	// resultat du prod mat local de taille localA->nbLignes, localB->nbColonnes
 	// situe ensuite ce petit bout dans localC
-	produitMat(localA, localB ,localC);
+	produitMat(localA, localB ,localTemp);
+	transferInto(localTemp,localC,0,rank,*n);
 
 	// transmit chunk of B
 
@@ -86,10 +90,10 @@ int main(int argc, char* argv[]){
   MPI_Gather (localC->mat,localC->nbLignes *localC->nbColonnes ,MPI_INT, finalC->mat,localC->nbLignes *localC->nbColonnes,MPI_INT,master,MPI_COMM_WORLD);
 
 	/* debug / verif */
-	if (rank == master){
+	if (rank == master ){
 	//	printMatrix(localA);
-	//	printMatrix(localB);
-    printMatrix(finalC);
+		printMatrix(finalC);
+  //  printMatrix(localTemp);
   }
 
 	MPI_Finalize();
@@ -245,4 +249,13 @@ struct matrix * input(char * file, int n){
 	}
 	fclose(fichier);
 	return source;
+}
+
+void transferInto(struct matrix* source, struct matrix * dest, int tour, int rank,int n){
+	int offset = (rank*source->nbColonnes + tour)%n;
+	for (int i =0; i < source->nbColonnes; i ++){
+		for (int j = 0 ; j < source->nbLignes; j ++ ){
+			dest->mat[offset + i + j*dest->nbColonnes] = dest->mat[offset + i + j*dest->nbColonnes] + source->mat[i + j *source->nbColonnes];
+		}
+	}
 }

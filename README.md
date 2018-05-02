@@ -20,11 +20,11 @@ La note sera fonction des fonctionnalités implémentées dans la liste ci-desso
 ## Compiler & Run
 A compiler utilisant :
   - __`gcc -Wall -std=c99 matXmat.c -o mXm -lm`__
-  - __`mpicc matXmat.c -o mXm par la suite`__
+  - __`mpicc -Wall -std=c99 matXmat.c -o mxm -fopenmp`__ par la suite
   - __`mpirun --oversubscribe -np 5 mxm A B`__
 
 ## Fonctions MPI utilisées
-- Scatter : eclate une data en parts egales et diffuse ces bouts a tous les procs, root compris
+- Scatter : éclate une data en parts égales et diffuse ces bouts à tous les procs, root compris
   - __`MPI_Scatter( void* send_data,  int send_count,  MPI_Datatype send_datatype,  void* recv_data,
               int recv_count,  MPI_Datatype recv_datatype,  int root,  MPI_Comm communicator)`__
 - Gather : processus inverse de scatter : rassemble et classe selon le rang
