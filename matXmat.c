@@ -68,22 +68,21 @@ int main(int argc, char* argv[]){
 	struct matrix * localTemp = malloc (sizeof(struct matrix));
 
 	*chunkSize = *n / numprocs;
-	// car n = p
 	localA = allocateMatrix (*chunkSize, *n);
-	localB = allocateMatrix (*n, *chunkSize);
+	localB = allocateMatrix (*chunkSize, *n);
 	localTemp = allocateMatrix(*chunkSize,*chunkSize);
 	int * localBtemp = malloc(sizeof (int) * localB->nbColonnes * localB->nbLignes);
 
 
   MPI_Scatter(sourceA->mat,*chunkSize * *n,MPI_INT,localA->mat,*chunkSize * *n,MPI_INT,master,MPI_COMM_WORLD);
 	MPI_Scatter(sourceB->mat, *chunkSize * *n,MPI_INT,localB->mat, *chunkSize * *n, MPI_INT,master,MPI_COMM_WORLD);
-//	rotateMatrix(localB);
+	rotateMatrix(localB);
 
 	localC = allocateMatrix(localA->nbLignes,*n);
 	int Successeur = (rank + 1) % numprocs;
 	int Predecesseur = (rank - 1 + numprocs) % numprocs;
 	// transmit chunk of B
-	for (int tour = 0; tour < numprocs - 1;tour++){
+	for (int tour = 0; tour < numprocs ;tour++){
 		// do job
 		produitMat(localA, localB ,localTemp);
 		transferInto(localTemp,localC,tour,rank,*n);
@@ -105,9 +104,10 @@ int main(int argc, char* argv[]){
 
 	/* debug / verif */
 	if (rank == master ){
-	//	printMatrix(localA);
-		printMatrix(finalC);
-	//	printMatrix(localB);
+		printMatrix(localA);
+	//	printMatrix(finalC);
+		printMatrix(localB);
+		printMatrix(localC);
 
   }
 
