@@ -14,6 +14,7 @@ void generateMatrix(struct matrix * s, int size);
 void generate0Matrix(struct matrix * s, int size);
 
 void printMatrix(struct matrix * s);
+void transposeMatrix(struct matrix * s);
 void rotateMatrix(struct matrix * s);
 void produitMat(struct matrix * A,struct matrix * B,struct matrix * C);
 void generateVector(struct matrix * s,int size);
@@ -55,7 +56,7 @@ int main(int argc, char* argv[]){
 		sourceA = input (argv[1],*n);
     finalC = allocateMatrix(sourceA->nbLignes,sourceA->nbColonnes);
 		sourceB = input (argv[2],*n);
-		rotateMatrix(sourceB);
+		transposeMatrix(sourceB);
 	}
 
 	MPI_Bcast(n,1,MPI_INT,master,MPI_COMM_WORLD);
@@ -76,8 +77,7 @@ int main(int argc, char* argv[]){
 
   MPI_Scatter(sourceA->mat,*chunkSize * *n,MPI_INT,localA->mat,*chunkSize * *n,MPI_INT,master,MPI_COMM_WORLD);
 	MPI_Scatter(sourceB->mat, *chunkSize * *n,MPI_INT,localB->mat, *chunkSize * *n, MPI_INT,master,MPI_COMM_WORLD);
-	rotateMatrix(localB);
-
+//	rotateMatrix(localB);
 
 	localC = allocateMatrix(localA->nbLignes,*n);
 	int Successeur = (rank + 1) % numprocs;
@@ -97,8 +97,6 @@ int main(int argc, char* argv[]){
 
 			MPI_Recv (localB->mat, localB->nbLignes * localB->nbColonnes, MPI_INT, Predecesseur, tour , MPI_COMM_WORLD, &status);
 			MPI_Send (localBtemp, localB->nbLignes * localB->nbColonnes, MPI_INT, Successeur, tour , MPI_COMM_WORLD);
-			printf( " tour : %d, prdecessor : %d\n", tour,Predecesseur);
-			printMatrix(localB);
 		}
 	}
 	// once all finished
@@ -108,8 +106,9 @@ int main(int argc, char* argv[]){
 	/* debug / verif */
 	if (rank == master ){
 	//	printMatrix(localA);
-	//	printMatrix(finalC);
-    printMatrix(localB);
+		printMatrix(finalC);
+	//	printMatrix(localB);
+
   }
 
 	MPI_Finalize();
@@ -150,19 +149,36 @@ void allocateMat(struct matrix * tmp,int nblin, int nbCol){
 	tmp->mat = calloc(nblin * nbCol, sizeof(int));
 }
 
-void rotateMatrix(struct matrix * s){
+void transposeMatrix(struct matrix * s){
+	// pour recuperer les colonnes
   struct matrix * rotated = allocateMatrix(s->nbColonnes,s->nbLignes);
   for (int l = 0; l < s->nbLignes; l++){
     for (int c = 0; c < s->nbColonnes; c++){
       rotated->mat[ l * s->nbColonnes + c] = s->mat[ c * s->nbLignes + l];
     }
   }
-	*s = *rotated;
 	int n;
 	n = s->nbColonnes;
 	s->nbColonnes = s->nbLignes;
 	s->nbLignes = n;
+	*s = *rotated;
 }
+
+void rotateMatrix(struct matrix * s){
+	struct matrix * rotated = allocateMatrix(s->nbColonnes,s->nbLignes);
+	for (int i = 0; i < s->nbLignes; i++){
+		for (int j = 0; j < s->nbColonnes; j ++){
+			// A [i,j] => A [j,i]
+			rotated->mat[j*s->nbLignes + i] = s->mat[i * s->nbColonnes + j];
+		}
+	}
+	int n;
+	n = s->nbColonnes;
+	s->nbColonnes = s->nbLignes;
+	s->nbLignes = n;
+	*s = *rotated;
+}
+
 
 void generateMatrix(struct matrix * s, int size) {
   //construction d'un tableau pour tester
