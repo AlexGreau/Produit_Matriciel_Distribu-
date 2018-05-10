@@ -16,6 +16,7 @@ void generate0Matrix(struct matrix * s, int size);
 void printMatrix(struct matrix * s);
 void transposeMatrix(struct matrix * s);
 void rotateMatrix(struct matrix * s);
+void resetMatrix(struct matrix * s);
 void produitMat(struct matrix * A,struct matrix * B,struct matrix * C);
 void generateVector(struct matrix * s,int size);
 
@@ -61,7 +62,6 @@ int main(int argc, char* argv[]){
 
 	MPI_Bcast(n,1,MPI_INT,master,MPI_COMM_WORLD);
 
-	// si n = numprocs
   struct matrix * localA = malloc (sizeof(struct matrix));
 	struct matrix * localB = malloc (sizeof(struct matrix));
 	struct matrix * localC = malloc (sizeof(struct matrix));
@@ -69,24 +69,27 @@ int main(int argc, char* argv[]){
 
 	*chunkSize = *n / numprocs;
 	localA = allocateMatrix (*chunkSize, *n);
-	localB = allocateMatrix (*chunkSize, *n);
+	localB = allocateMatrix (*chunkSize, *n); // car transposee
 	localTemp = allocateMatrix(*chunkSize,*chunkSize);
 	int * localBtemp = malloc(sizeof (int) * localB->nbColonnes * localB->nbLignes);
 
 
   MPI_Scatter(sourceA->mat,*chunkSize * *n,MPI_INT,localA->mat,*chunkSize * *n,MPI_INT,master,MPI_COMM_WORLD);
 	MPI_Scatter(sourceB->mat, *chunkSize * *n,MPI_INT,localB->mat, *chunkSize * *n, MPI_INT,master,MPI_COMM_WORLD);
-	rotateMatrix(localB);
 
 	localC = allocateMatrix(localA->nbLignes,*n);
-	int Successeur = (rank + 1) % numprocs;
-	int Predecesseur = (rank - 1 + numprocs) % numprocs;
-	// transmit chunk of B
-	for (int tour = 0; tour < numprocs ;tour++){
+	int  Successeur =  (rank - 1 + numprocs) % numprocs; // faux pour debug circulation (mauvais sens)
+	int  Predecesseur=(rank + 1) % numprocs;
+	for (int tour = 0; tour < numprocs;tour++){
 		// do job
+		resetMatrix(localTemp);
+		rotateMatrix(localB);
 		produitMat(localA, localB ,localTemp);
 		transferInto(localTemp,localC,tour,rank,*n);
+		rotateMatrix(localB);
 		// end job
+
+		// transmit chunk of B
 		if (rank != master){
 			MPI_Send (localB->mat, localB->nbLignes * localB->nbColonnes, MPI_INT, Successeur, tour , MPI_COMM_WORLD);
 			MPI_Recv (localB->mat, localB->nbLignes * localB->nbColonnes, MPI_INT, Predecesseur, tour , MPI_COMM_WORLD, &status);
@@ -98,17 +101,13 @@ int main(int argc, char* argv[]){
 			MPI_Send (localBtemp, localB->nbLignes * localB->nbColonnes, MPI_INT, Successeur, tour , MPI_COMM_WORLD);
 		}
 	}
-	// once all finished
-  // gather at master
+
+  // once all finished, gather at master
   MPI_Gather (localC->mat,localC->nbLignes *localC->nbColonnes ,MPI_INT, finalC->mat,localC->nbLignes *localC->nbColonnes,MPI_INT,master,MPI_COMM_WORLD);
 
 	/* debug / verif */
 	if (rank == master ){
-		printMatrix(localA);
-	//	printMatrix(finalC);
-		printMatrix(localB);
-		printMatrix(localC);
-
+		printMatrix(finalC);
   }
 
 	MPI_Finalize();
@@ -287,6 +286,14 @@ void transferInto(struct matrix* source, struct matrix * dest, int tour, int ran
 	for (int i =0; i < source->nbLignes; i ++){
 		for (int j = 0 ; j < source->nbColonnes; j ++ ){
 			dest->mat[offset + j + i*dest->nbColonnes] = source->mat[j + i *source->nbColonnes];
+		}
+	}
+}
+
+void resetMatrix(struct matrix * s){
+	for (int i = 0; i < s->nbLignes; i++){
+		for (int j = 0; j < s->nbColonnes; j++){
+			s->mat[i*s->nbColonnes + j]  = 0;
 		}
 	}
 }
