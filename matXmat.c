@@ -57,7 +57,7 @@ int main(int argc, char* argv[]){
 		sourceA = input (argv[1],*n);
     finalC = allocateMatrix(sourceA->nbLignes,sourceA->nbColonnes);
 		sourceB = input (argv[2],*n);
-		transposeMatrix(sourceB);
+		transposeMatrix(sourceB); //  afin d'avoir les colonnes en lignes : easy scatter
 	}
 
 	MPI_Bcast(n,1,MPI_INT,master,MPI_COMM_WORLD);
@@ -159,6 +159,7 @@ void transposeMatrix(struct matrix * s){
 	n = s->nbColonnes;
 	s->nbColonnes = s->nbLignes;
 	s->nbLignes = n;
+	free(s->mat);
 	*s = *rotated;
 }
 
@@ -174,6 +175,7 @@ void rotateMatrix(struct matrix * s){
 	n = s->nbColonnes;
 	s->nbColonnes = s->nbLignes;
 	s->nbLignes = n;
+	free(s->mat);
 	*s = *rotated;
 }
 
@@ -290,6 +292,7 @@ void transferInto(struct matrix* source, struct matrix * dest, int tour, int ran
 }
 
 void resetMatrix(struct matrix * s){
+	#pragma omp parallel for
 	for (int i = 0; i < s->nbLignes; i++){
 		for (int j = 0; j < s->nbColonnes; j++){
 			s->mat[i*s->nbColonnes + j]  = 0;
