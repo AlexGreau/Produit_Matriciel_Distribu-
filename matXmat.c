@@ -45,8 +45,8 @@ int main(int argc, char* argv[]){
 
 	int master = 0;
 
-  int * chunkSize = malloc (sizeof(int) * 1);
-	int * n = malloc (sizeof(int) *1);
+  int * chunkSize = malloc (sizeof(int) * 1); // taille du morceau de matrice
+	int * n = malloc (sizeof(int) * 1);
   struct matrix * sourceA = malloc (sizeof(struct matrix));
 	struct matrix * sourceB = malloc (sizeof(struct matrix));
 	struct matrix * finalC  = malloc (sizeof(struct matrix));
@@ -77,16 +77,15 @@ int main(int argc, char* argv[]){
   MPI_Scatter(sourceA->mat,*chunkSize * *n,MPI_INT,localA->mat,*chunkSize * *n,MPI_INT,master,MPI_COMM_WORLD);
 	MPI_Scatter(sourceB->mat, *chunkSize * *n,MPI_INT,localB->mat, *chunkSize * *n, MPI_INT,master,MPI_COMM_WORLD);
 
+	rotateMatrix(localB);
 	localC = allocateMatrix(localA->nbLignes,*n);
 	int  Successeur =  (rank - 1 + numprocs) % numprocs; // faux pour debug circulation (mauvais sens)
 	int  Predecesseur=(rank + 1) % numprocs;
-	for (int tour = 0; tour < numprocs;tour++){
+	for (int tour = 0; tour < numprocs ;tour++){
 		// do job
 		resetMatrix(localTemp);
-		rotateMatrix(localB);
 		produitMat(localA, localB ,localTemp);
 		transferInto(localTemp,localC,tour,rank,*n);
-		rotateMatrix(localB);
 		// end job
 
 		// transmit chunk of B
