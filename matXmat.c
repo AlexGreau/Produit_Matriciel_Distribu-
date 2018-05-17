@@ -30,7 +30,7 @@ void transferInto(struct matrix* source, struct matrix * dest, int tour, int ran
 
 struct matrix {
   // lineariser
- 	int * mat;
+ 	long * mat;
   int nbColonnes;
   int nbLignes;
 };
@@ -71,10 +71,10 @@ int main(int argc, char* argv[]){
 	localA = allocateMatrix (*chunkSize, *n);
 	localB = allocateMatrix (*chunkSize, *n); // car transposee
 	localTemp = allocateMatrix(*chunkSize,*chunkSize);
-	int * localBtemp = malloc(sizeof (int) * localB->nbColonnes * localB->nbLignes);
+	int * localBtemp = malloc(sizeof (long) * localB->nbColonnes * localB->nbLignes);
 
-  MPI_Scatter(sourceA->mat,*chunkSize * *n,MPI_INT,localA->mat,*chunkSize * *n,MPI_INT,master,MPI_COMM_WORLD);
-	MPI_Scatter(sourceB->mat, *chunkSize * *n,MPI_INT,localB->mat, *chunkSize * *n, MPI_INT,master,MPI_COMM_WORLD);
+  MPI_Scatter(sourceA->mat,*chunkSize * *n,MPI_LONG,localA->mat,*chunkSize * *n,MPI_LONG,master,MPI_COMM_WORLD);
+	MPI_Scatter(sourceB->mat, *chunkSize * *n,MPI_LONG,localB->mat, *chunkSize * *n, MPI_LONG,master,MPI_COMM_WORLD);
 
 	rotateMatrix(localB);
 	localC = allocateMatrix(localA->nbLignes,*n);
@@ -90,20 +90,20 @@ int main(int argc, char* argv[]){
 		// transmit chunk of B
 		if ( numprocs > 1){
 			if (rank != master){
-				MPI_Send (localB->mat, localB->nbLignes * localB->nbColonnes, MPI_INT, Successeur, tour , MPI_COMM_WORLD);
-				MPI_Recv (localB->mat, localB->nbLignes * localB->nbColonnes, MPI_INT, Predecesseur, tour , MPI_COMM_WORLD, &status);
+				MPI_Send (localB->mat, localB->nbLignes * localB->nbColonnes, MPI_LONG, Successeur, tour , MPI_COMM_WORLD);
+				MPI_Recv (localB->mat, localB->nbLignes * localB->nbColonnes, MPI_LONG, Predecesseur, tour , MPI_COMM_WORLD, &status);
 			}
 			else {
-				memcpy(localBtemp,localB->mat,sizeof (int) * localB->nbColonnes * localB->nbLignes);
+				memcpy(localBtemp,localB->mat,sizeof (long) * localB->nbColonnes * localB->nbLignes);
 
-				MPI_Recv (localB->mat, localB->nbLignes * localB->nbColonnes, MPI_INT, Predecesseur, tour , MPI_COMM_WORLD, &status);
-				MPI_Send (localBtemp, localB->nbLignes * localB->nbColonnes, MPI_INT, Successeur, tour , MPI_COMM_WORLD);
+				MPI_Recv (localB->mat, localB->nbLignes * localB->nbColonnes, MPI_LONG, Predecesseur, tour , MPI_COMM_WORLD, &status);
+				MPI_Send (localBtemp, localB->nbLignes * localB->nbColonnes, MPI_LONG, Successeur, tour , MPI_COMM_WORLD);
 			}
 		}
 	}
 
   // once all finished, gather at master
-		MPI_Gather (localC->mat,localC->nbLignes *localC->nbColonnes ,MPI_INT, finalC->mat,localC->nbLignes *localC->nbColonnes,MPI_INT,master,MPI_COMM_WORLD);
+		MPI_Gather (localC->mat,localC->nbLignes *localC->nbColonnes ,MPI_LONG, finalC->mat,localC->nbLignes *localC->nbColonnes,MPI_LONG,master,MPI_COMM_WORLD);
 
 
 	/* debug / verif */
@@ -139,14 +139,14 @@ struct matrix * allocateMatrix(int nblin, int nbCol) {
   struct matrix * tmp = malloc(sizeof(struct matrix));
   tmp->nbColonnes = nbCol;
   tmp->nbLignes = nblin;
-  tmp->mat = calloc(nblin * nbCol, sizeof(int));
+  tmp->mat = calloc(nblin * nbCol, sizeof(long));
   return tmp;
 }
 
 void allocateMat(struct matrix * tmp,int nblin, int nbCol){
 	tmp->nbColonnes = nbCol;
 	tmp->nbLignes = nblin;
-	tmp->mat = calloc(nblin * nbCol, sizeof(int));
+	tmp->mat = calloc(nblin * nbCol, sizeof(long));
 }
 
 void transposeMatrix(struct matrix * s){
@@ -187,7 +187,7 @@ void generateMatrix(struct matrix * s, int size) {
   int n = size;
   s->nbLignes = n;
   s->nbColonnes = n;
-  s->mat=malloc(n*n *sizeof(int));
+  s->mat=malloc(n*n *sizeof(long));
   for (int i = 0; i < n * n; i ++){
     s->mat[i] = (i + 1) % n;
   }
@@ -196,7 +196,7 @@ void generate0Matrix(struct matrix * s, int size){
 	int n = size;
   s->nbLignes = n;
   s->nbColonnes = n;
-  s->mat=malloc(n*n *sizeof(int));
+  s->mat=malloc(n*n *sizeof(long));
   for (int i = 0; i < n * n; i ++){
 		s->mat[i] = 0;
 	}
@@ -206,7 +206,7 @@ void generateVector(struct matrix * s,int size){
 	s->nbLignes = size;
 	s->nbColonnes = 1;
 	int n = s->nbColonnes * s->nbLignes;
-	s->mat=malloc (n * sizeof(int));
+	s->mat=malloc (n * sizeof(long));
   for (int i = 0; i < n; i ++){
     s->mat[i] = i+1;
   }
@@ -216,7 +216,7 @@ void printMatrix(struct matrix * s){
   //printf("---- Matrix of %i lanes & %i columns---- \n", s->nbLignes,s->nbColonnes);
   for (int i = 0; i < s->nbLignes; i++){
     for (int j = 0; j < s->nbColonnes; j++){
-      printf("%d ", s->mat[i*s->nbColonnes + j]);
+      printf("%ld ", s->mat[i*s->nbColonnes + j]);
     }
     printf ("\n");
   }
@@ -286,6 +286,7 @@ struct matrix * input(char * file, int n){
 
 void transferInto(struct matrix* source, struct matrix * dest, int tour, int rank,int n){
 	int offset = ((tour +rank)*source->nbColonnes)%n;
+	#pragma omp parallel for
 	for (int i =0; i < source->nbLignes; i ++){
 		for (int j = 0 ; j < source->nbColonnes; j ++ ){
 			dest->mat[offset + j + i*dest->nbColonnes] = source->mat[j + i *source->nbColonnes];
