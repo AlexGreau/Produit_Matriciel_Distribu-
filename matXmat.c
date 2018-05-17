@@ -30,7 +30,7 @@ void transferInto(struct matrix* source, struct matrix * dest, int tour, int ran
 
 struct matrix {
   // lineariser
-  int * mat;
+ 	int * mat;
   int nbColonnes;
   int nbLignes;
 };
@@ -73,7 +73,6 @@ int main(int argc, char* argv[]){
 	localTemp = allocateMatrix(*chunkSize,*chunkSize);
 	int * localBtemp = malloc(sizeof (int) * localB->nbColonnes * localB->nbLignes);
 
-
   MPI_Scatter(sourceA->mat,*chunkSize * *n,MPI_INT,localA->mat,*chunkSize * *n,MPI_INT,master,MPI_COMM_WORLD);
 	MPI_Scatter(sourceB->mat, *chunkSize * *n,MPI_INT,localB->mat, *chunkSize * *n, MPI_INT,master,MPI_COMM_WORLD);
 
@@ -89,20 +88,23 @@ int main(int argc, char* argv[]){
 		// end job
 
 		// transmit chunk of B
-		if (rank != master){
-			MPI_Send (localB->mat, localB->nbLignes * localB->nbColonnes, MPI_INT, Successeur, tour , MPI_COMM_WORLD);
-			MPI_Recv (localB->mat, localB->nbLignes * localB->nbColonnes, MPI_INT, Predecesseur, tour , MPI_COMM_WORLD, &status);
-		}
-		else {
-			memcpy(localBtemp,localB->mat,sizeof (int) * localB->nbColonnes * localB->nbLignes);
+		if ( numprocs > 1){
+			if (rank != master){
+				MPI_Send (localB->mat, localB->nbLignes * localB->nbColonnes, MPI_INT, Successeur, tour , MPI_COMM_WORLD);
+				MPI_Recv (localB->mat, localB->nbLignes * localB->nbColonnes, MPI_INT, Predecesseur, tour , MPI_COMM_WORLD, &status);
+			}
+			else {
+				memcpy(localBtemp,localB->mat,sizeof (int) * localB->nbColonnes * localB->nbLignes);
 
-			MPI_Recv (localB->mat, localB->nbLignes * localB->nbColonnes, MPI_INT, Predecesseur, tour , MPI_COMM_WORLD, &status);
-			MPI_Send (localBtemp, localB->nbLignes * localB->nbColonnes, MPI_INT, Successeur, tour , MPI_COMM_WORLD);
+				MPI_Recv (localB->mat, localB->nbLignes * localB->nbColonnes, MPI_INT, Predecesseur, tour , MPI_COMM_WORLD, &status);
+				MPI_Send (localBtemp, localB->nbLignes * localB->nbColonnes, MPI_INT, Successeur, tour , MPI_COMM_WORLD);
+			}
 		}
 	}
 
   // once all finished, gather at master
-  MPI_Gather (localC->mat,localC->nbLignes *localC->nbColonnes ,MPI_INT, finalC->mat,localC->nbLignes *localC->nbColonnes,MPI_INT,master,MPI_COMM_WORLD);
+		MPI_Gather (localC->mat,localC->nbLignes *localC->nbColonnes ,MPI_INT, finalC->mat,localC->nbLignes *localC->nbColonnes,MPI_INT,master,MPI_COMM_WORLD);
+
 
 	/* debug / verif */
 	if (rank == master ){
@@ -187,7 +189,7 @@ void generateMatrix(struct matrix * s, int size) {
   s->nbColonnes = n;
   s->mat=malloc(n*n *sizeof(int));
   for (int i = 0; i < n * n; i ++){
-    s->mat[i] = i + 1;
+    s->mat[i] = (i + 1) % n;
   }
 }
 void generate0Matrix(struct matrix * s, int size){
@@ -211,7 +213,7 @@ void generateVector(struct matrix * s,int size){
 }
 
 void printMatrix(struct matrix * s){
-  printf("---- Matrix of %i lanes & %i columns---- \n", s->nbLignes,s->nbColonnes);
+  //printf("---- Matrix of %i lanes & %i columns---- \n", s->nbLignes,s->nbColonnes);
   for (int i = 0; i < s->nbLignes; i++){
     for (int j = 0; j < s->nbColonnes; j++){
       printf("%d ", s->mat[i*s->nbColonnes + j]);
