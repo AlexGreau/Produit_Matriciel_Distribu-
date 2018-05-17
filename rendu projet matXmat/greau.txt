@@ -1,0 +1,30 @@
+~~~~~~~Projet - Produit Matriciel Distribué~~~~~~~
+
+Structures :
+	Matrix, representant une matrice de taille "nbColonnes" x "nbLignes", avec ses données placées	dans un Unique tableau "mat" de long tel que :
+		struct matrix {
+		  // lineaire
+		  long * mat;
+		  int nbColonnes;
+		  int nbLignes;
+		};
+
+Communications : 
+	Un broadcast de N
+	Deux scatters ( source A et source B )
+	Send & receive de voisin a voisin, en anneau comme demandé, sans deadlock
+	Un gather final  pour recuperer toutes les matrices de resultats locaux
+
+Breve synthèse :
+	Tout d'abord le master ouvre le premier des fichiers d'entrée pour trouver N, puis une fois N connu, reouvre chaque fichier d'entree et scanne ligne a ligne et stocke les donnees dans deux matrices sourceA et sourceB. Il transpose ensuite sourceB afin de retrouver les colonnes en lignes et les lignes en colonnes pour un scatter plus facile. S'en suit la repartition des bouts de sources entre procs via deux scatter. 
+	Chaque proc remet son bout de source B dans le bon sens, puis fait son produit matriciel local, stocke les resultats dans une matrix local C.
+	Une fois le tour fini, le master agglomère tous les resultats locaux en une matrix finalC et l'affiche.
+
+Fonctionnalités implementées : 
+	Calcul du produit matriciel avec N multiple de P
+	Gestion des matrices très grandes
+
+
+ merci de votre attention,
+
+Gréau Alexandre

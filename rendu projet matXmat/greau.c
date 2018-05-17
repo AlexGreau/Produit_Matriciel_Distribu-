@@ -67,8 +67,8 @@ int main(int argc, char* argv[]){
 	// DEBUT travail individuel
 	rotateMatrix(localB);
 	localC = allocateMatrix(localA->nbLignes,*n);
-	int  Successeur =  (rank - 1 + numprocs) % numprocs; // faux pour debug circulation
-	int  Predecesseur= (rank + 1) % numprocs;
+	int  Successeur =  (rank - 1 + numprocs) % numprocs; // faux pour debug circulation (mauvais sens)
+	int  Predecesseur=(rank + 1) % numprocs;
 	for (int tour = 0; tour < numprocs ;tour++){
 		// do job
 		resetMatrix(localTemp);
