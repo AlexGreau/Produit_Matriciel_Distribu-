@@ -7,18 +7,13 @@
 	#define max( a, b ) ( ((a) > (b)) ? (a) : (b) )
 #endif
 
-int getSuccesseur(int rank, int numprocs);
-int getPredecesseur(int rank, int numprocs);
 struct matrix * allocateMatrix(int nblin, int nbCol);
-void generateMatrix(struct matrix * s, int size);
-void generate0Matrix(struct matrix * s, int size);
-
 void printMatrix(struct matrix * s);
 void transposeMatrix(struct matrix * s);
 void rotateMatrix(struct matrix * s);
 void resetMatrix(struct matrix * s);
+
 void produitMat(struct matrix * A,struct matrix * B,struct matrix * C);
-void generateVector(struct matrix * s,int size);
 
 void allocateMat(struct matrix * tmp,int nblin, int nbCol);
 int nfinder(char* file);
@@ -152,6 +147,7 @@ void allocateMat(struct matrix * tmp,int nblin, int nbCol){
 void transposeMatrix(struct matrix * s){
 	// pour recuperer les colonnes
   struct matrix * rotated = allocateMatrix(s->nbColonnes,s->nbLignes);
+	#pragma omp parallel for
   for (int l = 0; l < s->nbLignes; l++){
     for (int c = 0; c < s->nbColonnes; c++){
       rotated->mat[ l * s->nbColonnes + c] = s->mat[ c * s->nbLignes + l];
@@ -167,6 +163,7 @@ void transposeMatrix(struct matrix * s){
 
 void rotateMatrix(struct matrix * s){
 	struct matrix * rotated = allocateMatrix(s->nbColonnes,s->nbLignes);
+	#pragma omp parallel for
 	for (int i = 0; i < s->nbLignes; i++){
 		for (int j = 0; j < s->nbColonnes; j ++){
 			// A [i,j] => A [j,i]
@@ -181,37 +178,6 @@ void rotateMatrix(struct matrix * s){
 	*s = *rotated;
 }
 
-
-void generateMatrix(struct matrix * s, int size) {
-  //construction d'un tableau pour tester
-  int n = size;
-  s->nbLignes = n;
-  s->nbColonnes = n;
-  s->mat=malloc(n*n *sizeof(long));
-  for (int i = 0; i < n * n; i ++){
-    s->mat[i] = (i + 1) % n;
-  }
-}
-void generate0Matrix(struct matrix * s, int size){
-	int n = size;
-  s->nbLignes = n;
-  s->nbColonnes = n;
-  s->mat=malloc(n*n *sizeof(long));
-  for (int i = 0; i < n * n; i ++){
-		s->mat[i] = 0;
-	}
-}
-
-void generateVector(struct matrix * s,int size){
-	s->nbLignes = size;
-	s->nbColonnes = 1;
-	int n = s->nbColonnes * s->nbLignes;
-	s->mat=malloc (n * sizeof(long));
-  for (int i = 0; i < n; i ++){
-    s->mat[i] = i+1;
-  }
-}
-
 void printMatrix(struct matrix * s){
   //printf("---- Matrix of %i lanes & %i columns---- \n", s->nbLignes,s->nbColonnes);
   for (int i = 0; i < s->nbLignes; i++){
@@ -221,15 +187,6 @@ void printMatrix(struct matrix * s){
     printf ("\n");
   }
 }
-
-int getSuccesseur(int rank, int numprocs){
-    return (rank + 1) % numprocs;
-}
-
-int getPredecesseur(int rank, int numprocs){
-    return (rank - 1 + numprocs) % numprocs;
-}
-
 
 int nfinder(char* file){
 	FILE* fichier = NULL;
