@@ -64,6 +64,10 @@ int main(int argc, char* argv[]){
   MPI_Scatter(sourceA->mat,*chunkSize * *n,MPI_LONG,localA->mat,*chunkSize * *n,MPI_LONG,master,MPI_COMM_WORLD);
 	MPI_Scatter(sourceB->mat, *chunkSize * *n,MPI_LONG,localB->mat, *chunkSize * *n, MPI_LONG,master,MPI_COMM_WORLD);
 
+  if (rank == master){
+    free(sourceA->mat);
+    free(sourceB->mat);
+  }
 	// DEBUT travail individuel
 	rotateMatrix(localB);
 	localC = allocateMatrix(localA->nbLignes,*n);
